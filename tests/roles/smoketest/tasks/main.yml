@@ -1,0 +1,9 @@
+- k8s_apply:
+    namespace: default
+    definition: "{{ lookup('template', 'simple-dc.yml') }}"
+    state: absent
+
+- k8s_apply:
+    namespace: default
+    definition: "{{ lookup('template', 'simple-dc.yml') }}"
+    state: absent

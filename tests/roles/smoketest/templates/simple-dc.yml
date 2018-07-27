@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: DeploymentConfig
+metadata:
+  name: echoserver
+spec:
+  template:
+    metadata:
+      labels:
+        app: echoserver
+    spec:
+      containers:
+        - name: echoserver
+          image: googlecontainer/echoserver:1.5
+      replicas: 1
