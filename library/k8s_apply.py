@@ -83,13 +83,17 @@ def main():
     manager = KubernetesApply(namespace=namespace,
                               definition=definition)
 
-    if module.params.get('state') == 'present':
-        manager.create()
-    else:
-        manager.delete()
+    try:
+        if module.params.get('state') == 'present':
+            manager.create()
+        else:
+            manager.delete()
 
-    module.exit_json(changed=manager.changed,
-                     msg=manager.message)
+        module.exit_json(changed=manager.changed,
+                         msg=manager.message)
+    except k8s_runner.CalledProcessError as ex:
+        msg = str(ex)
+        module.fail_json(msg=msg, stdout=ex.stdout, stderr=ex.stderr)
 
 
 from ansible.module_utils.basic import *  # noqa
