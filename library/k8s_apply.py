@@ -27,7 +27,7 @@ APPLY_OUTPUT_REG_STR = r'^(?P<resource>\w+) "(?P<name>[^"]+)" (?P<action>\w+)$'
 APPLY_OUTPUT_REG = re.compile(APPLY_OUTPUT_REG_STR)
 
 
-class KubernetesApply(object):
+class Kubernetes(object):
 
     def __init__(self, namespace=None, resource_type=None, resource_name=None,
                  definition=None, definition_file=None):
@@ -51,6 +51,8 @@ class KubernetesApply(object):
             result = match.groupdict()
             if result['action'] != 'unchanged':
                 self.changed = True
+        resource = self.runner.get(self.namespace, definition=self.definition)
+        return resource
 
     def delete(self):
         try:
@@ -80,20 +82,17 @@ def main():
     namespace = module.params.get('namespace', None)
     definition = module.params.get('definition', None)
 
-    manager = KubernetesApply(namespace=namespace,
-                              definition=definition)
+    kube = Kubernetes(namespace=namespace, definition=definition)
 
-    try:
-        if module.params.get('state') == 'present':
-            manager.create()
-        else:
-            manager.delete()
+    result = {}
+    if module.params.get('state') == 'present':
+        result['resource'] = kube.create()
+    else:
+        kube.delete()
+    result.update({'changed': kube.changed,
+                   'msg': kube.message})
 
-        module.exit_json(changed=manager.changed,
-                         msg=manager.message)
-    except k8s_runner.CalledProcessError as ex:
-        msg = str(ex)
-        module.fail_json(msg=msg, stdout=ex.stdout, stderr=ex.stderr)
+    module.exit_json(**result)
 
 
 from ansible.module_utils.basic import *  # noqa

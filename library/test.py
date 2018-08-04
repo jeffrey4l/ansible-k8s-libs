@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 def main():
-    import sys
     from ansible.module_utils.test_utils import a
     import time
     time.sleep(100)

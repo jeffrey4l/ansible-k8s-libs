@@ -1,7 +1,12 @@
+import json
 import subprocess
 
 
-class CalledProcessError(Exception):
+class KubeRunnerError(Exception):
+    pass
+
+
+class CalledProcessError(KubeRunnerError):
     def __init__(self, returncode, cmd, stdout, stderr):
         self.returncode = returncode
         self.cmd = cmd
@@ -13,7 +18,7 @@ class CalledProcessError(Exception):
                (self.cmd, self.returncode)
 
 
-class ResourceNotFound(Exception):
+class ResourceNotFound(KubeRunnerError):
 
     def __init__(self, message):
         self.message = message
@@ -39,33 +44,47 @@ class KubeletBinaryRunner(object):
         return stdout, stderr
 
     def apply(self, namespace, definition=None, definition_file=None):
+        cmd = self._gen_cmd('apply', namespace, definition=definition,
+                            definition_file=definition_file)
+        stdout, stderr = self._run_cmd(cmd, stdin=definition)
+        return stdout
+
+    def _gen_cmd(self, action, namespace, output_format=None,
+                 definition=None, definition_file=None,
+                 resource_name=None, resource_type=None):
         cmd = [self.KUBELET_BINARY]
-        stdin = None
         if namespace:
             cmd += ['--namespace', namespace]
-        cmd += ['apply']
+        cmd.append(action)
         if definition:
             cmd += ['--filename', '-']
-            stdin = definition
-        if definition_file:
+        elif definition_file:
             cmd += ['--filename', definition_file]
-        stdout, stderr = self._run_cmd(cmd, stdin)
-        return stdout
+        elif resource_name and resource_type:
+            cmd += [resource_type, resource_name]
+        else:
+            # TODO
+            raise
+        if output_format:
+            cmd += ['--output', output_format]
+        return cmd
+
+    def get(self, namespace, definition=None, definition_file=None):
+        cmd = self._gen_cmd('get', namespace, output_format='json',
+                            definition=definition,
+                            definition_file=definition_file)
+        stdout, stderr = self._run_cmd(cmd, stdin=definition)
+        return json.loads(stdout)['items']
 
     def delete(self, namespace=None, resource_type=None, resource_name=None,
                definition=None, definition_file=None):
-        cmd = [self.KUBELET_BINARY]
-        stdin = None
-        if namespace:
-            cmd += ['--namespace', namespace]
-        cmd += ['delete']
-        if definition:
-            cmd += ['--filename', '-']
-            stdin = definition
-        if definition_file:
-            cmd += ['--filename', definition_file]
+        cmd = self._gen_cmd('delete', namespace=namespace,
+                            resource_type=resource_type,
+                            resource_name=resource_name,
+                            definition=definition,
+                            definition_file=definition_file)
         try:
-            stdout, stderr = self._run_cmd(cmd, stdin)
+            stdout, stderr = self._run_cmd(cmd, stdin=definition)
             return stdout
         except CalledProcessError as ex:
             # When the resource doesn't exist
@@ -84,7 +103,11 @@ class OCBinaryRunner(KubeletBinaryRunner):
     KUBELET_BINARY = 'oc'
 
 
-class PythonRunner(object):
+class KubePythonRunner(object):
 
     def apply(self):
         pass
+
+
+class OCPyRunner(KubePythonRunner):
+    pass
