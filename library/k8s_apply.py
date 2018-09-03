@@ -23,7 +23,8 @@ EXAMPLES = '''
 '''
 
 
-APPLY_OUTPUT_REG_STR = r'^(?P<resource>\w+) "(?P<name>[^"]+)" (?P<action>\w+)$'
+APPLY_OUTPUT_REG_STR = (r'^(?P<resource>[^ ]+)'
+                        r'"(?P<name>[^"]+)" (?P<action>\w+)$')
 APPLY_OUTPUT_REG = re.compile(APPLY_OUTPUT_REG_STR)
 
 
